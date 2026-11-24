@@ -11,6 +11,10 @@ ScreenPass is a local movie-ticket booking demo built with React, Vite, Tailwind
 ### Booking
 <img width="1348" height="648" alt="image" src="https://github.com/user-attachments/assets/f14166ec-5095-4ef7-942a-6810ea3c6e3a" />
 
+## Booking Confirmation 
+<img width="1897" height="881" alt="image" src="https://github.com/user-attachments/assets/82581b68-f7fb-452d-ab9d-129e9438cefd" />
+
+
 
 ## Deploy for evaluation
 
