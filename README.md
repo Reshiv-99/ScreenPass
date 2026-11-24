@@ -2,6 +2,14 @@
 
 ScreenPass is a local movie-ticket booking demo built with React, Vite, Tailwind, Express, Prisma, and MySQL. All bookable schedules are managed by ScreenPass administrators. Customers start from a movie and use their selected city to see available demo showtimes. Demo bookings reserve seats and issue verifiable QR tickets without collecting payment.
 
+## 📸 Screenshots
+
+### Home page
+![Home page](docs/screenshots/home.png)
+
+### Booking
+![Booking page](docs/screenshots/booking.png)
+
 ## Deploy for evaluation
 
 Follow the [GitHub and Vercel deployment guide](DEPLOYMENT.md) to publish ScreenPass with one public HTTPS URL and a hosted MySQL database.
