@@ -1,0 +1,2 @@
+ALTER TABLE `Booking` ADD COLUMN `snacks` JSON NULL;
+ALTER TABLE `PaymentAttempt` ADD COLUMN `snacks` JSON NULL;

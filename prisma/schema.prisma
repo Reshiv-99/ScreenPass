@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  OWNER
+}
+
+enum SeatCategory {
+  STANDARD
+  PREMIUM
+  RECLINER
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          Role           @default(CUSTOMER)
+  createdAt     DateTime       @default(now())
+  bookings      Booking[]
+  notifications Notification[]
+  sessions      Session[]
+  payments      PaymentAttempt[]
+}
+
+model Session {
+  tokenHash String   @id @db.Char(64)
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model City {
+  slug    String   @id
+  name    String   @unique
+  lat     Float
+  lng     Float
+  cinemas Cinema[]
+}
+
+model Cinema {
+  id        String        @id @default(cuid())
+  name      String
+  address   String
+  lat       Float
+  lng       Float
+  citySlug  String
+  city      City          @relation(fields: [citySlug], references: [slug])
+  screens   Screen[]
+  movies    CinemaMovie[]
+  createdAt DateTime      @default(now())
+
+  @@unique([citySlug, name])
+}
+
+model Screen {
+  id        String   @id @default(cuid())
+  name      String
+  cinemaId  String
+  cinema    Cinema   @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
+  seats     Seat[]
+  shows     Show[]
+  createdAt DateTime @default(now())
+
+  @@unique([cinemaId, name])
+}
+
+model Movie {
+  tmdbId    Int           @id
+  title     String
+  poster    String?
+  createdAt DateTime      @default(now())
+  cinemas   CinemaMovie[]
+  shows     Show[]
+}
+
+model CinemaMovie {
+  cinemaId String
+  movieId  Int
+  cinema   Cinema @relation(fields: [cinemaId], references: [id], onDelete: Cascade)
+  movie    Movie  @relation(fields: [movieId], references: [tmdbId])
+
+  @@id([cinemaId, movieId])
+}
+
+model Show {
+  id             String     @id @default(cuid())
+  screenId       String
+  movieId        Int
+  startsAt       DateTime
+  endsAt         DateTime
+  screen         Screen     @relation(fields: [screenId], references: [id], onDelete: Restrict)
+  movie          Movie      @relation(fields: [movieId], references: [tmdbId])
+  seats          ShowSeat[]
+  bookings       Booking[]
+  payments       PaymentAttempt[]
+  createdAt      DateTime   @default(now())
+
+  @@unique([screenId, startsAt])
+  @@index([movieId, startsAt])
+}
+
+model Seat {
+  id        String       @id @default(cuid())
+  screenId  String
+  row       String       @db.Char(1)
+  number    Int
+  category  SeatCategory
+  enabled   Boolean      @default(true)
+  screen    Screen       @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  showSeats ShowSeat[]
+
+  @@unique([screenId, row, number])
+}
+
+model ShowSeat {
+  id        String       @id @default(cuid())
+  showId    String
+  seatId    String
+  price     Int
+  category  SeatCategory
+  enabled   Boolean
+  bookingId String?
+  holdId    String?
+  holdUntil DateTime?
+  show      Show         @relation(fields: [showId], references: [id], onDelete: Cascade)
+  seat      Seat         @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  booking   Booking?     @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  hold      PaymentAttempt? @relation(fields: [holdId], references: [id], onDelete: SetNull)
+
+  @@unique([showId, seatId])
+  @@index([bookingId])
+  @@index([holdId])
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  reference   String        @unique
+  ticketToken String        @unique @db.Char(64)
+  requestId   String        @db.Char(36)
+  userId      String
+  showId      String
+  tmdbId      Int
+  movieTitle  String
+  poster      String?
+  cinemaName  String
+  screenName  String
+  startsAt    DateTime
+  snacks      Json?
+  total       Int
+  status      BookingStatus @default(CONFIRMED)
+  createdAt   DateTime      @default(now())
+  cancelledAt DateTime?
+  user        User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  show        Show          @relation(fields: [showId], references: [id], onDelete: Restrict)
+  seats       BookingSeat[]
+  allocations ShowSeat[]
+  payment     PaymentAttempt?
+  email       BookingEmail?
+
+  @@unique([userId, requestId])
+  @@index([userId, startsAt])
+}
+
+enum BookingEmailStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model BookingEmail {
+  bookingId      String             @id
+  recipient      String             @db.VarChar(254)
+  verificationUrl String           @db.Text
+  status         BookingEmailStatus @default(PENDING)
+  attempts       Int                @default(0)
+  nextAttemptAt  DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  sentAt         DateTime?
+  booking        Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+}
+
+enum PaymentStatus {
+  HOLD
+  CONFIRMED
+  FAILED
+  REVIEW
+}
+
+model PaymentAttempt {
+  id            String        @id @default(cuid())
+  userId        String
+  showId        String
+  requestId     String        @db.Char(36)
+  snacks        Json?
+  seatIds       Json
+  amountPaise   Int
+  expiresAt     DateTime
+  status        PaymentStatus @default(HOLD)
+  orderId       String?       @unique
+  paymentId     String?       @unique
+  bookingId     String?       @unique
+  createdAt     DateTime      @default(now())
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  show          Show          @relation(fields: [showId], references: [id], onDelete: Restrict)
+  booking       Booking?      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  holds         ShowSeat[]
+
+  @@unique([userId, requestId])
+}
+
+model BookingSeat {
+  bookingId String
+  label     String
+  category  SeatCategory
+  price     Int
+  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@id([bookingId, label])
+}
+
+model Notification {
+  userId      String
+  tmdbId      Int
+  title       String
+  releaseDate String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tmdbId])
+}

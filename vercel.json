@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci --include=dev",
+  "buildCommand": "npm run db:generate && npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/handler.ts": {
+      "includeFiles": "{web/public/data/indian-cities.json,node_modules/.prisma/client/**}"
+    }
+  },
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/api(?:/.*)?",
+      "dest": "/api/handler"
+    },
+    {
+      "src": "/(?!api(?:/|$))(?:[^/]+/)*[^/.]*",
+      "dest": "/index.html"
+    }
+  ]
+}
